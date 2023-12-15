@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "TripStatus" ADD VALUE 'WAITING_FOR_CUSTOMER';

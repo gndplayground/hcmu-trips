@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         Int       @id @default(autoincrement())
+  email      String    @unique
+  password   String
+  role       Role
+  createdAt  DateTime  @default(now())
+  seed       String?
+  isLocked   Boolean   @default(false)
+  isDisabled Boolean   @default(false)
+  Customer   Customer?
+  Driver     Driver?
+  Trip       Trip[]
+}
+
+model Driver {
+  id               Int                      @id @default(autoincrement())
+  name             String
+  phone            String
+  vehicleNumber    String
+  vehicleModel     String
+  coords           Unsupported("geometry")?
+  userId           Int                      @unique
+  status           DriverStatus             @default(OFFLINE)
+  vehicleType      DriverType               @default(CAR)
+  lastUpdateCoords DateTime?
+  user             User                     @relation(fields: [userId], references: [id])
+  Trip             Trip[]
+  TripLog          TripLog[]
+
+  @@index([coords], map: "location_driver", type: Gist)
+}
+
+model Customer {
+  id               Int                      @id @default(autoincrement())
+  name             String
+  phone            String
+  createdAt        DateTime                 @default(now())
+  userId           Int                      @unique
+  status           CustomerStatus           @default(OFFLINE)
+  coords           Unsupported("geometry")?
+  lastUpdateCoords DateTime?
+  user             User                     @relation(fields: [userId], references: [id])
+  Trip             Trip[]
+
+  @@index([coords], map: "location_customer", type: Gist)
+}
+
+model Trip {
+  id                      Int                     @id @default(autoincrement())
+  createdAt               DateTime                @default(now())
+  customerId              Int?
+  driverId                Int?
+  startAt                 DateTime?
+  endAt                   DateTime?
+  startCoords             Unsupported("geometry")
+  toCoords                Unsupported("geometry")
+  pricePaid               Float?
+  driverEarn              Float?
+  distance                Float?
+  estimated               Float?
+  outsideCustomerFullname String?
+  outsideCustomerPhone    String?
+  rating                  Float?
+  ratingComment           String?
+  operatorId              Int?
+  startAddress            String?
+  toAddress               String?
+  status                  TripStatus              @default(AVAILABLE)
+  customer                Customer?               @relation(fields: [customerId], references: [id])
+  driver                  Driver?                 @relation(fields: [driverId], references: [id])
+  operator                User?                   @relation(fields: [operatorId], references: [id])
+  TripLog                 TripLog[]
+
+  @@index([startCoords], map: "location_trip_start", type: Gist)
+  @@index([toCoords], map: "location_trip_to", type: Gist)
+}
+
+model TripLog {
+  id        Int                      @id @default(autoincrement())
+  tripId    Int
+  createdAt DateTime                 @default(now())
+  coords    Unsupported("geometry")?
+  trip      Trip                     @relation(fields: [tripId], references: [id])
+  Driver    Driver?                  @relation(fields: [driverId], references: [id])
+  driverId  Int?
+  status    TripStatusLog?
+  route     Json?
+
+  @@index([coords], map: "location_trip_log", type: Gist)
+}
+
+enum Role {
+  OPERATOR
+  USER
+  DRIVER
+}
+
+enum DriverStatus {
+  AVAILABLE
+  BUSY
+  OFFLINE
+}
+
+enum DriverType {
+  CAR
+  MOTORCYCLE
+}
+
+enum CustomerStatus {
+  AVAILABLE
+  BUSY
+  OFFLINE
+}
+
+enum TripStatusLog {
+  AVAILABLE
+  PENDING
+  ON_THE_WAY
+  WAITING_FOR_CUSTOMER
+  DRIVING
+  FINISHED
+  CANCELED
+  CANCELED_BY_DRIVER
+  REJECTED
+  ROUTE_DRIVING_CHANGED
+  ROUTE_ON_THE_WAY_CHANGED
+}
+
+enum TripStatus {
+  AVAILABLE
+  PENDING
+  ON_THE_WAY
+  WAITING_FOR_CUSTOMER
+  DRIVING
+  FINISHED
+  CANCELED
+  CANCELED_BY_DRIVER
+}
